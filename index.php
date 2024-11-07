@@ -1,4 +1,5 @@
 <?php
+session_start();
 require_once "config/koneksi.php";
 if (isset($_POST['login'])) {
     $email = $_POST['email'];

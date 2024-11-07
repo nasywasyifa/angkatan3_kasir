@@ -7,7 +7,7 @@ require_once "config/koneksi.php";
 
 
 // Waktu :
-$currentTime = date('d-M-y');
+$currentTime = date('Y-m-d');
 
 // generate function (method)
 function generateTransactionCode()
@@ -72,7 +72,7 @@ if (empty($_SESSION['click_count'])) {
                     <h4 class="text-center">Add Transaksi</h1>
                 </div>
                 <div class="col-8 offset-2">
-                    <form action="" method="post">
+                    <form action="controller/transaksi-store.php" method="post">
                         <div class="mb-3">
                             <label for="" class="form-label ">No. Transaksi</label>
                             <input style="border-radius: 20px;" class="form-control w-50" name="kode_transaksi"
@@ -121,7 +121,7 @@ if (empty($_SESSION['click_count'])) {
                                     </tr>
                                     <tr>
                                         <th colspan="5">Kembalian</th>
-                                        <td><input type="number" class="form-control" id="kembalian_keseluruhan"
+                                        <td><input type="number" class="form-control" id="kembalian_keseluruhan_input"
                                                 name="kembalian" readonly>
                                         </td>
                                     </tr>
@@ -166,12 +166,117 @@ if (empty($_SESSION['click_count'])) {
                 <?php
                 } ?>
                 newRow += "</select></td>";
+                newRow += "<td><select class='form-control item-select' name='id_barang[]' required>";
+                newRow += "<option value=''>--Pilih Barang--</option>";
+                newRow += "</select></td>";
+                newRow += "<td><input type='number' class='form-control jumlah-input' name='jumlah[]' value='0' required></td>";
+                newRow += "<td><input type='number' class='form-control harga-input' name='sisa_produk[]' readonly></td>";
+                newRow += "<td><input type='number' class='form-control' name='harga[]' readonly></td>";
                 newRow += "</tr>";
                 tbody.insertAdjacentHTML('beforeend', newRow);
 
+                attachCategoryChangeListener();
+                attachItemChangeListener();
+                attachJumlahChangeListener()
 
-            })
-        })
+            });
+            //fungsi untuk menampilkan barang berdasarkan kategori ...
+
+            function attachCategoryChangeListener() {
+                const categorySelects = document.querySelectorAll('.category-select');
+                categorySelects.forEach(select => {
+                    select.addEventListener('change', function() {
+                        const categoryId = this.value;
+                        const itemSelect = this.closest('tr').querySelector('.item-select');
+
+                        if (categoryId) {
+                            fetch(`controller/get-product-dari-category.php?id_kategori=${categoryId}`)
+                                .then(response => response.json())
+                                .then(data => {
+                                    itemSelect.innerHTML = "<option value=''>--Pilih Barang--</option>";
+                                    data.forEach(item => {
+                                        itemSelect.innerHTML += `<option value ='${item.id}'>${item.nama_barang}</option>`;
+                                    });
+                                });
+                        } else {
+                            itemSelect.innerHTML = "<option value=''>--Pilih Barang--</option>";
+                        }
+
+                    });
+                });
+            }
+            //untuk menampilkan qty dan harga ...
+            function attachItemChangeListener() {
+                const itemSelects = document.querySelectorAll('.item-select');
+                itemSelects.forEach(select => {
+                    select.addEventListener('change', function() {
+                        const itemId = this.value;
+                        const row = this.closest('tr');
+                        const sisaProdukInput = row.querySelector('input[name="sisa_produk[]"]');
+                        const hargaInput = row.querySelector('input[name="harga[]"]');
+
+                        if (itemId) {
+                            fetch('controller/get-barang-details.php?id_barang=' + itemId)
+                                .then(response => response.json())
+                                .then(data => {
+                                    sisaProdukInput.value = data.qty;
+                                    hargaInput.value = data.harga;
+                                })
+                        } else {
+                            sisaProdukInput.value = '';
+                            hargaInput.value = '';
+                        }
+                    });
+                });
+            }
+            const totalHargaKeseluruhan = document.getElementById('total_harga_keseluruhan');
+            const nominalBayarKeseluruhanInput = document.getElementById('nominal_bayar_keseluruhan');
+            const kembalianKeseluruhanInput = document.getElementById('kembalian_keseluruhan_input');
+            //fungsi untuk membuat alert jumlah > sisaProduk
+            function attachJumlahChangeListener() {
+                const jumlahInputs = document.querySelectorAll('.jumlah-input');
+                jumlahInputs.forEach(input => {
+                    input.addEventListener('input', function() {
+                        const row = this.closest('tr');
+                        const sisaProdukInput = row.querySelector('input[name="sisa_produk[]"]');
+                        const hargaInput = row.querySelector('input[name="harga[]"]');
+                        const totalHargaInput = document.getElementById('total_harga_keseluruhan');
+                        const nominalBayarInput = document.getElementById('nominal_bayar_keseluruhan');
+                        const kembalianInput = document.getElementById('kembalian_keseluruhan');
+
+                        const jumlah = parseInt(this.value) || 0;
+                        const sisaProduk = parseInt(sisaProdukInput.value) || 0;
+                        const harga = parseFloat(hargaInput.value) || 0;
+
+                        if (jumlah > sisaProduk) {
+                            alert("Jumlah tidak boleh melebihi sisa produk");
+                            this.value = sisaProduk;
+                            return;
+                        }
+                        updateTotalKeseluruhan();
+                    });
+                });
+
+            }
+
+            function updateTotalKeseluruhan() {
+                let totalKeseluruhan = 0;
+                const jumlahInput = document.querySelectorAll('.jumlah-input');
+                jumlahInput.forEach(input => {
+                    const row = input.closest('tr');
+                    const hargaInput = row.querySelector('input[name="harga[]"]');
+                    const harga = parseFloat(hargaInput.value) || 0;
+                    const jumlah = parseInt(input.value) || 0;
+                    totalKeseluruhan += jumlah * harga;
+                });
+                totalHargaKeseluruhan.value = totalKeseluruhan;
+            }
+            nominalBayarKeseluruhanInput.addEventListener('input', function() {
+                const nominalBayar = parseFloat(this.value) || 0;
+                const totalHarga = parseFloat(totalHargaKeseluruhan.value) || 0;
+                kembalianKeseluruhanInput.value = nominalBayar - totalHarga;
+            });
+        });
     </script>
 </body>
 
