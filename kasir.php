@@ -33,7 +33,7 @@ session_regenerate_id(true);
                         <div class="table table-responsive">
                             <div class="mt-2">
                                 <a href="tambah-transaction.php"
-                                    class="btn btn-primary btn-sm">Kasir</a>
+                                    class="btn btn-primary btn-sm">Tambah Transaksi</a>
                             </div>
                             <table class="table table-bordered">
                                 <thead>
